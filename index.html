@@ -39,14 +39,14 @@
     overflow-x: hidden;
   }
   a { color: inherit; }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 32px; }
 
   /* Glow behind the hero, the "afterglow" itself */
   .sky {
-    position: absolute; inset: 0 0 auto 0; height: 900px; pointer-events: none; z-index: 0;
+    position: absolute; inset: 0 0 auto 0; height: 1100px; pointer-events: none; z-index: 0;
     background:
-      radial-gradient(600px 380px at 50% 18%, rgba(250, 191, 36, 0.16), transparent 70%),
-      radial-gradient(900px 600px at 50% 0%, rgba(40, 52, 110, 0.55), transparent 70%);
+      radial-gradient(760px 420px at 50% 16%, rgba(250, 191, 36, 0.16), transparent 70%),
+      radial-gradient(1400px 760px at 50% 0%, rgba(40, 52, 110, 0.55), transparent 70%);
   }
 
   nav { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; padding: 22px 0; }
@@ -59,7 +59,7 @@
   nav a.link { color: var(--muted); text-decoration: none; font-size: 15px; }
   nav a.link:hover { color: var(--text); }
 
-  header.hero { position: relative; z-index: 1; text-align: center; padding: 72px 0 40px; }
+  header.hero { position: relative; z-index: 1; text-align: center; padding: 36px 0 8px; }
   .eyebrow {
     display: inline-flex; align-items: center; gap: 8px;
     font: 500 13px var(--sans); color: var(--amber); letter-spacing: 0.02em;
@@ -67,11 +67,11 @@
   }
   .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
   h1 {
-    font: 400 clamp(46px, 8vw, 92px)/0.98 var(--serif);
-    letter-spacing: -0.02em; margin: 26px auto 22px; max-width: 15ch;
+    font: 400 clamp(46px, 6.4vw, 88px)/0.98 var(--serif);
+    letter-spacing: -0.02em; margin: 20px auto 18px; max-width: 15ch;
   }
   h1 em { font-style: italic; color: var(--amber); }
-  .lede { color: var(--muted); font-size: clamp(17px, 2.2vw, 20px); max-width: 40ch; margin: 0 auto 34px; }
+  .lede { color: var(--muted); font-size: clamp(17px, 2.2vw, 20px); max-width: 44ch; margin: 0 auto 28px; }
   .lede strong { color: var(--text); font-weight: 500; }
 
   .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
@@ -87,7 +87,7 @@
   .fineprint { color: var(--faint); font-size: 14px; margin-top: 16px; }
 
   /* Video in a Mac-ish frame */
-  .stage { position: relative; z-index: 1; margin: 48px auto 0; max-width: 1000px; }
+  .stage { position: relative; z-index: 1; margin: 40px auto 0; max-width: 1200px; }
   .screen {
     border-radius: 14px; overflow: hidden; background: #000;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -154,6 +154,22 @@
   footer { border-top: 1px solid var(--line); margin-top: 90px; padding: 28px 0 40px; color: var(--faint); font-size: 14px; }
   footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 
+  /* Wide screens: text beside the video so both fit the first screen */
+  @media (min-width: 1100px) {
+    .wrap { max-width: 1440px; padding: 0 48px; }
+    .hero-grid {
+      display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 56px; align-items: center;
+      min-height: calc(100vh - 86px); padding-bottom: 40px;
+    }
+    header.hero { text-align: left; padding: 0; }
+    header.hero h1 { font-size: clamp(52px, 4.6vw, 80px); margin: 22px 0 20px; max-width: 11ch; }
+    header.hero .lede { margin: 0 0 30px; max-width: 34ch; }
+    header.hero .cta { justify-content: flex-start; }
+    .stage { margin: 0; max-width: none; }
+    .sky { background:
+      radial-gradient(700px 480px at 68% 40%, rgba(250, 191, 36, 0.12), transparent 70%),
+      radial-gradient(1400px 800px at 40% 0%, rgba(40, 52, 110, 0.55), transparent 70%); }
+  }
   @media (max-width: 860px) {
     .states { grid-template-columns: 1fr 1fr; }
     .features { grid-template-columns: 1fr; gap: 28px; }
@@ -185,6 +201,7 @@
     </div>
   </nav>
 
+  <div class="hero-grid">
   <header class="hero">
     <span class="eyebrow"><span class="dot"></span>For Claude Code and Codex on macOS</span>
     <h1>Know when your AI agents <em>need you.</em></h1>
@@ -202,6 +219,7 @@
       <video src="afterglow-demo.mp4" poster="poster.jpg" autoplay muted loop playsinline preload="metadata"
              aria-label="Demo: Afterglow's idle screen showing three agent sessions, one turning amber when it needs you"></video>
     </div>
+  </div>
   </div>
 
   <section id="how">
