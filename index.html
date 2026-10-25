@@ -136,7 +136,7 @@
 
   .signup { text-align: center; padding: 130px 0 40px; position: relative; }
   .signup::before {
-    content: ""; position: absolute; left: 50%; top: 60px; width: 520px; height: 300px; transform: translateX(-50%);
+    content: ""; position: absolute; left: 50%; top: 60px; width: min(520px, 100%); height: 300px; transform: translateX(-50%);
     background: radial-gradient(closest-side, rgba(250, 191, 36, 0.14), transparent); pointer-events: none;
   }
   .signup h2 { position: relative; }
