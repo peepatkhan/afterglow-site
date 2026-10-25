@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Afterglow — Know when your AI agents need you</title>
+<meta name="description" content="Afterglow turns your idle Mac into a quiet status board for Claude Code and Codex, and lights up the moment an agent is waiting for you. Local logs only.">
+<meta property="og:title" content="Afterglow — Know when your AI agents need you">
+<meta property="og:description" content="A macOS idle screen for Claude Code and Codex. See which agent is working, which one is waiting for you, and which is stuck on a permission prompt.">
+<meta property="og:image" content="poster.jpg">
+<meta name="theme-color" content="#08080d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #08080d;
+    --bg-raise: #101019;
+    --line: rgba(255, 255, 255, 0.08);
+    --text: #f4f2ee;
+    --muted: #9a98a3;
+    --faint: #66646e;
+    --amber: #fabf24;
+    --amber-soft: rgba(250, 191, 36, 0.14);
+    --violet: #bf85fc;
+    --green: #4ade80;
+    --serif: "Instrument Serif", Georgia, serif;
+    --sans: "Geist", -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 400 17px/1.6 var(--sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  a { color: inherit; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  /* Glow behind the hero, the "afterglow" itself */
+  .sky {
+    position: absolute; inset: 0 0 auto 0; height: 900px; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(600px 380px at 50% 18%, rgba(250, 191, 36, 0.16), transparent 70%),
+      radial-gradient(900px 600px at 50% 0%, rgba(40, 52, 110, 0.55), transparent 70%);
+  }
+
+  nav { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; padding: 22px 0; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -0.01em; text-decoration: none; }
+  .orb {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff 0%, var(--amber) 45%, rgba(250, 191, 36, 0.3) 100%);
+    box-shadow: 0 0 18px rgba(250, 191, 36, 0.6);
+  }
+  nav a.link { color: var(--muted); text-decoration: none; font-size: 15px; }
+  nav a.link:hover { color: var(--text); }
+
+  header.hero { position: relative; z-index: 1; text-align: center; padding: 72px 0 40px; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font: 500 13px var(--sans); color: var(--amber); letter-spacing: 0.02em;
+    padding: 6px 12px; border-radius: 999px; background: var(--amber-soft);
+  }
+  .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
+  h1 {
+    font: 400 clamp(46px, 8vw, 92px)/0.98 var(--serif);
+    letter-spacing: -0.02em; margin: 26px auto 22px; max-width: 15ch;
+  }
+  h1 em { font-style: italic; color: var(--amber); }
+  .lede { color: var(--muted); font-size: clamp(17px, 2.2vw, 20px); max-width: 40ch; margin: 0 auto 34px; }
+  .lede strong { color: var(--text); font-weight: 500; }
+
+  .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    font: 500 16px var(--sans); text-decoration: none; cursor: pointer;
+    padding: 13px 22px; border-radius: 12px; border: 1px solid transparent;
+  }
+  .btn-primary { background: var(--amber); color: #1a1405; }
+  .btn-primary:hover { background: #ffd04d; }
+  .btn-ghost { border-color: var(--line); color: var(--text); background: rgba(255, 255, 255, 0.03); }
+  .btn-ghost:hover { border-color: rgba(255, 255, 255, 0.2); }
+  .fineprint { color: var(--faint); font-size: 14px; margin-top: 16px; }
+
+  /* Video in a Mac-ish frame */
+  .stage { position: relative; z-index: 1; margin: 48px auto 0; max-width: 1000px; }
+  .screen {
+    border-radius: 14px; overflow: hidden; background: #000;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 40px 120px -20px rgba(250, 191, 36, 0.18), 0 30px 80px rgba(0, 0, 0, 0.6);
+  }
+  .bar { height: 30px; display: flex; align-items: center; gap: 7px; padding: 0 12px; background: #15151c; border-bottom: 1px solid var(--line); }
+  .bar i { width: 11px; height: 11px; border-radius: 50%; background: #2c2c35; }
+  .screen video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #08080d; }
+
+  section { padding: 110px 0 0; }
+  h2 { font: 400 clamp(34px, 5vw, 54px)/1.05 var(--serif); letter-spacing: -0.015em; margin: 0 0 16px; }
+  h2 em { font-style: italic; color: var(--amber); }
+  .section-lede { color: var(--muted); max-width: 52ch; margin: 0 0 44px; }
+
+  .states { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .state { background: var(--bg-raise); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  .pill { display: inline-block; font: 500 12px var(--sans); padding: 3px 9px; border-radius: 999px; margin-bottom: 12px; }
+  .state p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+  .p-tool { color: var(--green); background: rgba(74, 222, 128, 0.14); }
+  .p-think { color: var(--violet); background: rgba(191, 133, 252, 0.14); }
+  .p-turn { color: var(--amber); background: var(--amber-soft); }
+  .p-perm { color: var(--amber); background: var(--amber-soft); }
+  .state.needs { border-color: rgba(250, 191, 36, 0.45); }
+
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px 36px; }
+  .feature h3 { font: 500 18px var(--sans); margin: 0 0 8px; letter-spacing: -0.01em; }
+  .feature p { margin: 0; color: var(--muted); font-size: 16px; }
+  .feature .num { font: 400 30px var(--serif); font-style: italic; color: var(--amber); display: block; margin-bottom: 6px; }
+
+  .privacy {
+    display: grid; grid-template-columns: 1.1fr 1fr; gap: 48px; align-items: center;
+    background: var(--bg-raise); border: 1px solid var(--line); border-radius: 22px; padding: 48px;
+  }
+  .privacy ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+  .privacy li { display: flex; gap: 12px; color: var(--muted); }
+  .privacy li::before { content: ""; flex: none; width: 7px; height: 7px; margin-top: 10px; border-radius: 50%; background: var(--amber); }
+  code { font: 400 14px var(--mono); color: var(--text); background: rgba(255, 255, 255, 0.06); padding: 2px 6px; border-radius: 6px; }
+
+  .faq { display: grid; grid-template-columns: 1fr 1fr; gap: 0 48px; }
+  details { border-top: 1px solid var(--line); padding: 18px 0; }
+  summary { cursor: pointer; font-weight: 500; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; color: var(--faint); font-weight: 300; }
+  details[open] summary::after { content: "–"; }
+  details p { color: var(--muted); margin: 10px 0 0; font-size: 16px; }
+
+  .signup { text-align: center; padding: 130px 0 40px; position: relative; }
+  .signup::before {
+    content: ""; position: absolute; left: 50%; top: 60px; width: 520px; height: 300px; transform: translateX(-50%);
+    background: radial-gradient(closest-side, rgba(250, 191, 36, 0.14), transparent); pointer-events: none;
+  }
+  .signup h2 { position: relative; }
+  .signup .section-lede { margin: 0 auto 32px; position: relative; }
+  form { position: relative; display: flex; gap: 10px; justify-content: center; max-width: 480px; margin: 0 auto; flex-wrap: wrap; }
+  input[type="email"] {
+    flex: 1 1 240px; min-width: 0; font: 400 16px var(--sans); color: var(--text);
+    padding: 13px 16px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.04);
+  }
+  input[type="email"]::placeholder { color: var(--faint); }
+  input[type="email"]:focus { outline: 2px solid rgba(250, 191, 36, 0.5); outline-offset: 1px; }
+  .form-note { color: var(--faint); font-size: 14px; margin-top: 14px; min-height: 1.4em; position: relative; }
+  .form-note.ok { color: var(--amber); }
+
+  footer { border-top: 1px solid var(--line); margin-top: 90px; padding: 28px 0 40px; color: var(--faint); font-size: 14px; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+  @media (max-width: 860px) {
+    .states { grid-template-columns: 1fr 1fr; }
+    .features { grid-template-columns: 1fr; gap: 28px; }
+    .privacy { grid-template-columns: 1fr; padding: 32px 24px; gap: 28px; }
+    .faq { grid-template-columns: 1fr; }
+    section { padding-top: 84px; }
+  }
+  @media (max-width: 520px) {
+    .wrap { padding: 0 16px; }
+    .states { grid-template-columns: 1fr; }
+    header.hero { padding-top: 40px; }
+    .bar { height: 22px; }
+    .bar i { width: 8px; height: 8px; }
+    nav a.link.hide-sm { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<div class="sky" aria-hidden="true"></div>
+
+<div class="wrap">
+  <nav>
+    <a class="brand" href="#"><span class="orb" aria-hidden="true"></span>Afterglow</a>
+    <div style="display:flex; gap:22px; align-items:center">
+      <a class="link hide-sm" href="#how">How it works</a>
+      <a class="link hide-sm" href="#privacy">Privacy</a>
+      <a class="btn btn-ghost" href="#beta" style="padding:8px 14px; font-size:14px">Join the beta</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <span class="eyebrow"><span class="dot"></span>For Claude Code and Codex on macOS</span>
+    <h1>Know when your AI agents <em>need you.</em></h1>
+    <p class="lede">Step away from your Mac and it becomes a quiet status board for every agent session. <strong>The moment one is waiting for you, it glows.</strong></p>
+    <div class="cta">
+      <a class="btn btn-primary" href="#beta">Join the free beta</a>
+      <a class="btn btn-ghost" href="#how">See how it works</a>
+    </div>
+    <p class="fineprint">macOS 14 or later · Free during beta · No account</p>
+  </header>
+
+  <div class="stage">
+    <div class="screen">
+      <div class="bar" aria-hidden="true"><i></i><i></i><i></i></div>
+      <video src="afterglow-demo.mp4" poster="poster.jpg" autoplay muted loop playsinline preload="metadata"
+             aria-label="Demo: Afterglow's idle screen showing three agent sessions, one turning amber when it needs you"></video>
+    </div>
+  </div>
+
+  <section id="how">
+    <h2>Agents don't tell you <em>when they stop.</em></h2>
+    <p class="section-lede">You start a long task, go make coffee, and come back to find it has been waiting ten minutes for a yes. Afterglow reads each session and shows where it stands at a glance, from across the room.</p>
+    <div class="states">
+      <div class="state"><span class="pill p-tool">Running tool</span><p>Running tests, editing files, executing commands.</p></div>
+      <div class="state"><span class="pill p-think">Thinking</span><p>Working out the next step. Nothing for you to do.</p></div>
+      <div class="state needs"><span class="pill p-turn">Your turn</span><p>Finished its turn. It's your move.</p></div>
+      <div class="state needs"><span class="pill p-perm">Needs permission?</span><p>A tool call has been pending for over 30 seconds, so it's probably waiting on a permission prompt.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="features">
+      <div class="feature"><span class="num">i.</span><h3>Fades in when you walk away</h3><p>After a few idle minutes the screen shows every recent session. Move the mouse and it's gone.</p></div>
+      <div class="feature"><span class="num">ii.</span><h3>Every agent, side by side</h3><p>Claude Code and Codex sessions in one grid, or one big ambient view when a single agent is running.</p></div>
+      <div class="feature"><span class="num">iii.</span><h3>A glance from the menu bar</h3><p>A count of active sessions, with a small amber dot when something is waiting for you.</p></div>
+      <div class="feature"><span class="num">iv.</span><h3>Keeps the Mac awake while agents work</h3><p>Optional. The Mac won't idle-sleep mid-task, though the display can still sleep.</p></div>
+      <div class="feature"><span class="num">v.</span><h3>Make it yours</h3><p>Set your own background image and the typeface for the clock. Burn-in protection slowly drifts the layout.</p></div>
+      <div class="feature"><span class="num">vi.</span><h3>Built for the Mac</h3><p>A native Swift app that lives quietly in the menu bar. No Electron, no browser tab.</p></div>
+    </div>
+  </section>
+
+  <section id="privacy">
+    <div class="privacy">
+      <div>
+        <h2>Your code <em>stays put.</em></h2>
+        <p class="section-lede" style="margin:0">Afterglow reads the log files your agents already write on disk. That's all it does with them.</p>
+      </div>
+      <ul>
+        <li><span>Reads <code>~/.claude/projects</code> and <code>~/.codex/sessions</code> locally</span></li>
+        <li><span>Nothing leaves your Mac: no account, no analytics, no network calls</span></li>
+        <li><span>Optional privacy mode hides commands, file names and replies on screen</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Questions</h2>
+    <div class="faq">
+      <div>
+        <details><summary>Which agents does it support?</summary><p>Claude Code and the Codex CLI today. Tell us what you use when you join the beta, as more are on the way.</p></details>
+        <details><summary>Is it a screen saver?</summary><p>It works like one, but it's a regular full-screen window shown after you've been idle. On first launch Afterglow helps you turn off the macOS screen saver so it doesn't cover the view.</p></details>
+        <details><summary>How does it know an agent needs me?</summary><p>It follows each session's log as it's written. When an agent ends its turn, it's your turn. When a tool call sits pending for a while, it's probably asking for permission.</p></details>
+      </div>
+      <div>
+        <details><summary>What does it cost?</summary><p>The beta is free. A paid version with extra features may come later, and beta testers will hear about it first.</p></details>
+        <details><summary>What do I need?</summary><p>A Mac on macOS 14 Sonoma or later, plus Claude Code or Codex.</p></details>
+        <details><summary>Does it slow my Mac down?</summary><p>It's designed not to. It reads only the new lines of each log every couple of seconds, and the full-screen view runs only while you're away.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <div class="signup" id="beta">
+    <h2>Be first to <em>see the glow.</em></h2>
+    <p class="section-lede">Join the beta and we'll email you a download link. No spam, just Afterglow updates.</p>
+    <!-- Set data-endpoint to a form backend (e.g. Formspree, Tally) that accepts a POSTed "email" field. -->
+    <form id="beta-form" data-endpoint="" novalidate>
+      <label for="email" style="position:absolute; left:-9999px">Email address</label>
+      <input id="email" name="email" type="email" placeholder="you@example.com" autocomplete="email" required>
+      <button class="btn btn-primary" type="submit">Join the beta</button>
+    </form>
+    <p class="form-note" id="form-note" role="status"></p>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Afterglow</span>
+    <span>Not affiliated with Anthropic or OpenAI. Claude and Codex are trademarks of their owners.</span>
+  </div>
+</footer>
+
+<script>
+  const form = document.getElementById("beta-form");
+  const note = document.getElementById("form-note");
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = form.email.value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      note.className = "form-note";
+      note.textContent = "Please enter a valid email address.";
+      return;
+    }
+    const endpoint = form.dataset.endpoint;
+    if (!endpoint) {
+      note.className = "form-note";
+      note.textContent = "Sign-ups open soon. Check back in a few days.";
+      return;
+    }
+    note.className = "form-note";
+    note.textContent = "Sending…";
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Accept": "application/json" },
+        body: new FormData(form),
+      });
+      if (!res.ok) throw new Error(res.status);
+      form.reset();
+      note.className = "form-note ok";
+      note.textContent = "You're on the list. We'll be in touch.";
+    } catch {
+      note.className = "form-note";
+      note.textContent = "Something went wrong. Please try again.";
+    }
+  });
+</script>
+</body>
+</html>
